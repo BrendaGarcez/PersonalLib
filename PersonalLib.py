@@ -14,30 +14,14 @@ drive_service = build('drive', 'v3', credentials=creds)
 
 st.title("📚 Minha Biblioteca Particular")
 
-# --- ÁREA DE UPLOAD ---
-uploaded_file = st.file_uploader("Escolha um PDF para carregar", type="pdf")
-
-if uploaded_file is not None:
-    with st.spinner('Enviando para o Google Drive...'):
-        file_metadata = {
-            'name': uploaded_file.name,
-            'parents': [PASTA_ID]
-        }
-        # Converte o arquivo do Streamlit para um fluxo de bytes
-        media = MediaIoBaseUpload(io.BytesIO(uploaded_file.getvalue()), 
-                                  mimetype='application/pdf')
-        
-        drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-        st.success(f"O livro '{uploaded_file.name}' foi salvo com sucesso!")
-
 st.divider()
 
 # --- LISTAGEM DE LIVROS ---
-st.subheader("Meus Livros")
+st.subheader("📚 Minha Estante")
 
 results = drive_service.files().list(
     q=f"'{PASTA_ID}' in parents and trashed = false",
-    fields="files(id, name, webViewLink)"
+    fields="files(id, name, webViewLink, thumbnailLink)"
 ).execute()
 
 items = results.get('files', [])
@@ -45,6 +29,15 @@ items = results.get('files', [])
 if not items:
     st.info("A pasta está vazia.")
 else:
-    for item in items:
-        # Cria um link que abre o PDF direto no Drive
-        st.markdown(f"📖 [{item['name']}]({item['webViewLink']})")
+    # Cria uma grade (grid) de 3 colunas
+    cols = st.columns(3)
+    
+    for idx, item in enumerate(items):
+        with cols[idx % 3]:
+            # Link da imagem (usa a do Drive ou um ícone de PDF bonito)
+            img_url = item.get('thumbnailLink', "https://cdn-icons-png.flaticon.com/512/337/337946.png")
+            
+            # Container para o livro
+            st.image(img_url, use_container_width=True)
+            st.markdown(f"<div style='text-align: center;'><a href='{item['webViewLink']}'>{item['name']}</a></div>", unsafe_allow_html=True)
+            st.write("") # Espaçamento
